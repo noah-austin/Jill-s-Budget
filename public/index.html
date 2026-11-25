@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f1ea">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Budget">
+<title>Jill's Budget</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232f6f5e'/%3E%3Ctext x='32' y='45' font-size='38' text-anchor='middle' fill='white' font-family='Georgia,serif'%3E$%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f6f1ea; --card: #fffdfa; --ink: #26221d; --muted: #7b7268;
+    --line: #e7dfd3; --accent: #2f6f5e; --accent-ink: #fff; --warn: #b3412e; --track: #ebe3d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #171512; --card: #211e1a; --ink: #f1ebe2; --muted: #a0968a;
+      --line: #35302a; --accent: #63b39c; --accent-ink: #10231d; --warn: #ec8a75; --track: #312c26;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 460px; margin: 0 auto; padding: 20px 16px calc(40px + env(safe-area-inset-bottom)); }
+  h1 { font: 600 20px Georgia, "Times New Roman", serif; margin: 0; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; margin-bottom: 14px; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; }
+  .link { color: var(--muted); font-size: 15px; padding: 8px 4px; text-decoration: underline; text-underline-offset: 3px; }
+  .primary {
+    background: var(--accent); color: var(--accent-ink); font-weight: 600;
+    border-radius: 12px; padding: 13px 16px; width: 100%;
+  }
+  .primary:disabled { opacity: .6; }
+  input {
+    width: 100%; padding: 12px 13px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--bg); min-height: 48px;
+  }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 5px; }
+  .field { margin-bottom: 12px; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; min-width: 0; }
+
+  .months { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .months strong { font-size: 16px; }
+  .arrow { width: 44px; height: 44px; border-radius: 50%; font-size: 22px; color: var(--muted); }
+  .arrow:disabled { opacity: .25; cursor: default; }
+
+  .left { font: 600 52px/1.05 Georgia, "Times New Roman", serif; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+  .left.over { color: var(--warn); }
+  .caption { color: var(--muted); margin-top: 2px; }
+  .bar { height: 10px; border-radius: 99px; background: var(--track); overflow: hidden; margin: 16px 0 8px; }
+  .bar > div { height: 100%; border-radius: 99px; background: var(--accent); transition: width .3s; }
+  .bar.over > div { background: var(--warn); }
+  .meta { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); gap: 12px; }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+  li:first-child { border-top: 0; }
+  .what { flex: 1; min-width: 0; }
+  .what div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .what small { color: var(--muted); font-size: 13px; }
+  .amt { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .del { width: 36px; height: 36px; border-radius: 50%; color: var(--muted); font-size: 18px; flex: none; }
+  .empty { color: var(--muted); text-align: center; padding: 10px 0; }
+  .error { color: var(--warn); font-size: 15px; margin: 8px 0 0; }
+  .error:empty { display: none; }
+  h2 { font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 8px; }
+  [hidden] { display: none !important; }
+  .login { margin-top: 18vh; text-align: center; }
+  .login h1 { font-size: 30px; margin-bottom: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <section id="login" class="login" hidden>
+    <h1>Jill's Budget</h1>
+    <form id="loginForm" class="card">
+      <div class="field">
+        <label for="passcode">Passcode</label>
+        <input id="passcode" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="primary">Open</button>
+      <p class="error" id="loginError" role="alert"></p>
+    </form>
+  </section>
+
+  <section id="app" hidden>
+    <header>
+      <h1>Jill's Budget</h1>
+      <button class="link" id="logout">Log out</button>
+    </header>
+
+    <div class="card">
+      <div class="months">
+        <button class="arrow" id="prev" aria-label="Previous month">‹</button>
+        <strong id="monthName"></strong>
+        <button class="arrow" id="next" aria-label="Next month">›</button>
+      </div>
+      <div id="summary">
+        <div class="left" id="left"></div>
+        <div class="caption" id="caption"></div>
+        <div class="bar" id="bar"><div></div></div>
+        <div class="meta"><span id="spent"></span><span id="pace"></span></div>
+      </div>
+      <p class="empty" id="noBudget" hidden>No monthly amount has been set yet.</p>
+      <button class="link" id="editBudget" hidden>Change monthly amount</button>
+      <form id="budgetForm" hidden>
+        <div class="field" style="margin-top:12px">
+          <label for="budgetAmount" id="budgetLabel">Monthly amount</label>
+          <input id="budgetAmount" inputmode="decimal" placeholder="0.00" required>
+        </div>
+        <button class="primary">Save amount</button>
+        <p class="error" id="budgetError" role="alert"></p>
+      </form>
+    </div>
+
+    <form class="card" id="addForm">
+      <h2>Add spending</h2>
+      <div class="row">
+        <div class="field">
+          <label for="amount">Amount</label>
+          <input id="amount" inputmode="decimal" placeholder="0.00" required>
+        </div>
+        <div class="field">
+          <label for="date">Date</label>
+          <input id="date" type="date" required>
+        </div>
+      </div>
+      <div class="field">
+        <label for="note">What for? (optional)</label>
+        <input id="note" maxlength="80" placeholder="Groceries, coffee…">
+      </div>
+      <button class="primary" id="addBtn">Add</button>
+      <p class="error" id="addError" role="alert"></p>
+    </form>
+
+    <div class="card">
+      <h2>This month's spending</h2>
+      <ul id="list"></ul>
+      <p class="empty" id="emptyList" hidden>Nothing spent yet.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const pad = (n) => String(n).padStart(2, '0');
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const money = (cents) => (cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+const toCents = (text) => {
+  const n = Number(String(text).replace(/[$,\s]/g, ''));
+  return Number.isFinite(n) ? Math.round(n * 100) : NaN;
+};
+
+let month = today().slice(0, 7);
+let view = null;
+
+async function api(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && url !== '/api/login') { showLogin(); throw new Error(''); }
+  if (!res.ok) throw new Error(data.error || 'Something went wrong. Try again.');
+  return data;
+}
+
+function showLogin() {
+  $('app').hidden = true;
+  $('login').hidden = false;
+  $('passcode').focus();
+}
+
+function shiftMonth(by) {
+  const [y, m] = month.split('-').map(Number);
+  const d = new Date(y, m - 1 + by, 1);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+}
+
+function render() {
+  const [y, m] = month.split('-').map(Number);
+  const current = today().slice(0, 7);
+  const isAdmin = view.role === 'admin';
+  const hasBudget = view.budgetCents != null;
+
+  $('login').hidden = true;
+  $('app').hidden = false;
+  $('monthName').textContent = new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  $('next').disabled = month >= current;
+
+  $('summary').hidden = !hasBudget;
+  $('noBudget').hidden = hasBudget;
+  $('editBudget').hidden = !(isAdmin && hasBudget) || !$('budgetForm').hidden;
+  if (isAdmin && !hasBudget) $('budgetForm').hidden = false;
+  $('budgetLabel').textContent = `Monthly amount (from ${$('monthName').textContent} on)`;
+
+  if (hasBudget) {
+    const left = view.budgetCents - view.spentCents;
+    const over = left < 0;
+    $('left').textContent = money(Math.abs(left));
+    $('left').classList.toggle('over', over);
+    $('caption').textContent = over ? 'over budget' : `left of ${money(view.budgetCents)}`;
+    $('bar').classList.toggle('over', over);
+    $('bar').firstElementChild.style.width = Math.min(100, (view.spentCents / view.budgetCents) * 100) + '%';
+    $('spent').textContent = `${money(view.spentCents)} spent`;
+    const daysLeft = new Date(y, m, 0).getDate() - new Date().getDate() + 1;
+    $('pace').textContent = month === current && !over
+      ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left · ${money(Math.floor(left / daysLeft))}/day`
+      : '';
+  }
+
+  const list = $('list');
+  list.replaceChildren();
+  for (const e of view.expenses) {
+    const [ey, em, ed] = e.date.split('-').map(Number);
+    const li = document.createElement('li');
+    const what = document.createElement('div');
+    what.className = 'what';
+    const title = document.createElement('div');
+    title.textContent = e.note || 'Spending';
+    const when = document.createElement('small');
+    when.textContent = new Date(ey, em - 1, ed).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    what.append(title, when);
+    const amt = document.createElement('span');
+    amt.className = 'amt';
+    amt.textContent = money(e.amountCents);
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.textContent = '×';
+    del.setAttribute('aria-label', `Remove ${title.textContent} ${amt.textContent}`);
+    del.onclick = async () => {
+      if (!confirm(`Remove ${title.textContent} (${amt.textContent})?`)) return;
+      try { view = await api('DELETE', '/api/expenses/' + e.id); render(); } catch (err) { if (err.message) alert(err.message); }
+    };
+    li.append(what, amt, del);
+    list.append(li);
+  }
+  $('emptyList').hidden = view.expenses.length > 0;
+}
+
+async function load() {
+  try {
+    view = await api('GET', '/api/month?m=' + month);
+    render();
+  } catch (err) { if (err.message) alert(err.message); }
+}
+
+$('loginForm').onsubmit = async (ev) => {
+  ev.preventDefault();
+  $('loginError').textContent = '';
+  try {
+    await api('POST', '/api/login', { passcode: $('passcode').value });
+    $('passcode').value = '';
+    await load();
+  } catch (err) { $('loginError').textContent = err.message; }
+};
+
+$('logout').onclick = async () => { await api('POST', '/api/logout', {}); showLogin(); };
+$('prev').onclick = () => { month = shiftMonth(-1); $('budgetForm').hidden = true; load(); };
+$('next').onclick = () => { month = shiftMonth(1); $('budgetForm').hidden = true; load(); };
+
+$('editBudget').onclick = () => {
+  $('budgetForm').hidden = false;
+  $('editBudget').hidden = true;
+  $('budgetAmount').value = (view.budgetCents / 100).toFixed(2);
+  $('budgetAmount').focus();
+};
+
+$('budgetForm').onsubmit = async (ev) => {
+  ev.preventDefault();
+  $('budgetError').textContent = '';
+  const amountCents = toCents($('budgetAmount').value);
+  if (!(amountCents > 0)) { $('budgetError').textContent = 'Enter an amount, like 500.'; return; }
+  try {
+    view = await api('PUT', '/api/budget', { month, amountCents });
+    $('budgetForm').hidden = true;
+    $('budgetAmount').value = '';
+    render();
+  } catch (err) { $('budgetError').textContent = err.message; }
+};
+
+$('addForm').onsubmit = async (ev) => {
+  ev.preventDefault();
+  $('addError').textContent = '';
+  const amountCents = toCents($('amount').value);
+  if (!(amountCents > 0)) { $('addError').textContent = 'Enter an amount, like 12.50.'; return; }
+  $('addBtn').disabled = true;
+  try {
+    view = await api('POST', '/api/expenses', { date: $('date').value, amountCents, note: $('note').value });
+    month = view.month;
+    $('amount').value = '';
+    $('note').value = '';
+    $('date').value = today();
+    render();
+  } catch (err) { $('addError').textContent = err.message; }
+  $('addBtn').disabled = false;
+};
+
+$('date').value = today();
+$('date').max = today();
+load();
+</script>
+</body>
+</html>
